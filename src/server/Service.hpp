@@ -10,6 +10,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <regex>
+
+#include "base64.h" // 来自 cpp-base64 库
+
 extern storage::DataManager *data_;
 namespace storage
 {
@@ -135,7 +139,10 @@ namespace storage
             }
 
             // 获取文件名
-            const char *filename = evhttp_find_header(req->input_headers, "FileName");
+            std::string filename = evhttp_find_header(req->input_headers, "FileName");
+            // 解码文件名
+            filename = base64_decode(filename);
+
             // 获取存储类型，客户端自定义请求头 StorageType
             std::string storage_type = evhttp_find_header(req->input_headers, "StorageType");
             // 组织存储路径
@@ -209,6 +216,58 @@ namespace storage
             return tmp;
         }
 
+        // 前端代码处理函数
+        // 在渲染函数中直接处理StorageInfo
+        static std::string generateModernFileList(const std::vector<StorageInfo> &files)
+        {
+            std::stringstream ss;
+            ss << "<div class='file-list'><h3>已上传文件</h3>";
+
+            for (const auto &file : files)
+            {
+                std::string filename = FileUtil(file.storage_path_).FileName();
+
+                // 从路径中解析存储类型（示例逻辑，需根据实际路径规则调整）
+                std::string storage_type = "low";
+                if (file.storage_path_.find("/deep/") != std::string::npos)
+                {
+                    storage_type = "deep";
+                }
+
+                ss << "<div class='file-item'>"
+                   << "<div class='file-info'>"
+                   << "<span>📄" << filename << "</span>"
+                   << "<span class='file-type'>"
+                   << (storage_type == "deep" ? "深度存储" : "普通存储")
+                   << "</span>"
+                   << "<span>" << formatSize(file.fsize_) << "</span>"
+                   << "<span>" << TimetoStr(file.mtime_) << "</span>"
+                   << "</div>"
+                   << "<button onclick=\"window.location='" << file.url_ << "'\">⬇️ 下载</button>"
+                   << "</div>";
+            }
+
+            ss << "</div>";
+            return ss.str();
+        }
+
+        // 文件大小格式化函数
+        static std::string formatSize(uint64_t bytes)
+        {
+            const char *units[] = {"B", "KB", "MB", "GB"};
+            int unit_index = 0;
+            double size = bytes;
+
+            while (size >= 1024 && unit_index < 3)
+            {
+                size /= 1024;
+                unit_index++;
+            }
+
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(2) << size << " " << units[unit_index];
+            return ss.str();
+        }
         static void ListShow(struct evhttp_request *req, void *arg)
         {
             mylog::GetLogger("asynclogger")->Info("ListShow()");
@@ -216,64 +275,24 @@ namespace storage
             std::vector<StorageInfo> arry;
             data_->GetAll(&arry);
 
-            // 2. 根据存储信息，组织html文件数据
-            std::stringstream ss;
-            ss << "<html><head><title>FILELIST</title></head>";
-            ss << "<body><h1>Download</h1><table>";
-            for (auto &a : arry)
-            {
-                ss << "<tr>";
-                std::string filename = FileUtil(a.storage_path_).FileName();
-                ss << "<td><a href='" << a.url_ << "'>" << filename << "</a></td>";
-                ss << "<td align='right'>" << TimetoStr(a.mtime_) << "</td>";
-                ss << "<td align='right'>" << a.fsize_ / 1024 << "k</td>";
-                ss << "</tr>";
-            }
-            ss << "</table>";
+            // 读取模板文件
+            std::ifstream templateFile("index.html");
+            std::string templateContent(
+                (std::istreambuf_iterator<char>(templateFile)),
+                std::istreambuf_iterator<char>());
 
-            // 添加文件上传表单
-            ss << "<h1>Upload</h1>";
-            ss << "<form id='uploadForm'>";
-            ss << "<input type='file' id='fileInput' name='file'/>";
-            ss << "<select id='storageType'>";
-            ss << "<option value='deep'>Deep Storage</option>";
-            ss << "<option value='low'>Low Storage</option>";
-            ss << "</select>";
-            ss << "<button type='button' onclick='uploadFile()'>Upload</button>";
-            ss << "</form>";
-
-            // 动态注入后端地址（此处假设从服务器配置获取）
-            std::string backendUrl = "http://127.0.0.1:8081"; // 实际应从配置读取
-            ss << "<script>";
-            ss << "const config = { backendUrl: '" << backendUrl << "' };";
-            ss << "function uploadFile() {";
-            ss << "    var fileInput = document.getElementById('fileInput');";
-            ss << "    var storageType = document.getElementById('storageType').value;";
-            ss << "    var file = fileInput.files[0];";
-            ss << "    if (!file) { alert('Please select a file'); return; }";
-            ss << "    var formData = new FormData();";
-            ss << "    formData.append('file', file);";
-            ss << "    var xhr = new XMLHttpRequest();";
-            ss << "    var uploadUrl = config.backendUrl + '/upload';"; // 动态拼接接口地址
-            ss << "    xhr.open('POST', uploadUrl, true);";
-            ss << "    xhr.setRequestHeader('StorageType', storageType);";
-            ss << "    xhr.setRequestHeader('FileName', file.name);";
-            ss << "    xhr.onload = function() {";
-            ss << "        if (xhr.status === 200) {";
-            ss << "            alert('File uploaded successfully');";
-            ss << "            location.reload();";
-            ss << "        } else {";
-            ss << "            alert('Upload failed');";
-            ss << "        }";
-            ss << "    };";
-            ss << "    xhr.send(formData);";
-            ss << "}";
-            ss << "</script>";
-
-            ss << "</body></html>";
+            // 替换html文件中的占位符
+            //替换文件列表进html
+            templateContent = std::regex_replace(templateContent,
+                                                 std::regex("\\{\\{FILE_LIST\\}\\}"),
+                                                 generateModernFileList(arry));
+            //替换服务器地址进hrml
+            templateContent = std::regex_replace(templateContent,
+                                                 std::regex("\\{\\{BACKEND_URL\\}\\}"),
+                                                "http://"+storage::Config::GetInstance()->GetServerIp()+":"+std::to_string(storage::Config::GetInstance()->GetServerPort()));
             // 获取请求的输出evbuffer
             struct evbuffer *buf = evhttp_request_get_output_buffer(req);
-            auto response_body = ss.str();
+            auto response_body = templateContent;
             // 把前面的html数据给到evbuffer，然后设置响应头部字段，最后返回给浏览器
             evbuffer_add(buf, (const void *)response_body.c_str(), response_body.size());
             evhttp_add_header(req->output_headers, "Content-Type", "text/html;charset=utf-8");

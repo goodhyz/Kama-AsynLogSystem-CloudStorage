@@ -2,13 +2,12 @@
 
 ⭐️ 本项目为【代码随想录知识星球】 教学项目
 
-[详细文档链接](https://www.yuque.com/chengxuyuancarl/ipf60h)
-
 ⭐️ 在里详细讲解：项目前置知识 + 项目细节 + 代码框架解读 + 面试题与回答 + 简历写法 + 项目拓展。 全面帮助你用这个项目求职面试！
 
 ## 项目概述
 
 本项目基于**libevent**网络库实现文件上传服务，支持上传下载和展示功能，支持多种存储等级的存储服务，并携带了异步日志系统，支持备份重要日志，多线程并发写日志等功能。
+src下的client为win客户端，可以不实现，直接使用web端与服务端交互。
 
 ## 环境准备
 
@@ -49,7 +48,7 @@ sudo apt-get install libssl-dev
 wget https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz
 tar xvf libevent-2.1.12-stable.tar.gz  //解压下载的源码压缩包，目录下会生成一个libevent-2.1.12-stable目录
 cd libevent-2.1.12-stable                 //切换到libevent-2.1.12-stable目录,(安装步骤可以查看README.md文件)
-./configure                                       //生成Makefile文件，用ll Makefile可以看到Makefile文件已生成
+./configure                                     //生成Makefile文件，用ll Makefile可以看到Makefile文件已生成
 make                                          //编译
 sudo make install                            //安装
 
@@ -69,11 +68,14 @@ nc 127.1 9995 //若安装成功，该终端会返回一个Hello, World!
 源码链接：https://github.com/r-lyeh-archived/bundle
 
 克隆下来包含bundle.cpp与bundle.h即可使用 
+#### 4. cpp-base64
+`git clone https://github.com/ReneNyffenegger/cpp-base64.git`
+之后把该目录内的base64.h和.cpp文件拷贝到本项目文件src/server/下即可使用
 
 ### web端
 ip+port即可访问
 
-### 客户端Win(可选，与服务端实现类似)
+### 客户端Win(可选实现，与服务端实现类似)
 #### 1. libevent
 
 Win的话会麻烦不少。提前准备工具：
@@ -127,14 +129,19 @@ nmake /f Makefile.nmake OPENSSL_DIR=D:\software\openssl_output
 然后在C/C++下面的Linker把库路径和库的名字加上：Linker->General->Additional Library Directories 在这里添加你的libevent源码路径。
 
 然后再Linker下点击Input，点击Additional Dependenies ，点击<Edit...>，输入libevent.lib;ws2_32.lib;
-
 ## 运行方式
+先把Kama-AsynLogSystem-CloudStorage/src/server目录下的Storage.conf文件中的下面两个字段配好，如下面，替换成你自己的服务器ip地址和要使用的端口号，（如果使用的是云服务器需要去你买的云服务器示例下开放安全组规则允许外界访问该端口）。
+```
+"server_port" : 8081,
+"server_ip" : "127.0.0.1"
+```
+再把Kama-AsynLogSystem-CloudStorage/log_system/logs_code下的config.conf文件中的如下两个字段配好，这两个字段是备份日志存放的服务器地址和端口号。（这个配置是可选的，如果没有配置，会链接错误，备份日志功能不会被启动，但是不影响其他部分日志系统的功能，本机还是可以正常写日志的）
+```
+"backup_addr" : "47.116.22.222",
+"backup_port" : 8080
+```
+把log_stsytem目录下的backlog目录中的ServerBackupLog.cpp和hpp文件拷贝置另外一个服务器或当前服务器作为备份日志服务器，使用命令`g++ ServerBackupLog.cpp`生成可执行文件，`./a.out 端口号` 即可启动备份日志服务器，这里端口号由输入的端口号决定，要与客户端config.conf里的backup_port字段保持一致。
 
-走到src目录下的server目录，`make`即可生成test可执行文件。把log_stsytem目录下的backlog目录中的ServerBackupLog.cpp和hpp文件拷贝置另外一个服务器或当前服务器作为备份日志服务器，使用命令`g++ ServerBackupLog.cpp`生成可执行文件，`./a.out 8080` 即可启动备份日志服务器，随后`./test`即可运行整个服务。
+在Kama-AsynLogSystem-CloudStorage/src/server目录下使用make命令，生成test可执行文件，./test就可以运行起来了。
 打开浏览器输入ip+port即可访问该服务，
 或按照上方可选客户端实现，启动客户端后添加文件到对应文件夹即可上传文件
-
-启动后，默认占用服务器8081端口。
-
-
-
