@@ -65,7 +65,7 @@ namespace storage
 #endif
                 if (-1 == event_base_dispatch(base))
                 {
-                    mylog::GetLogger("asynclogger")->Debug("event_base_dispatch err");
+                    mylog::GetLogger("asynclogger")->Debug("event_base_dispatch err"); 
                 }
             }
             if (base)
@@ -139,7 +139,7 @@ namespace storage
             }
 
             // 获取文件名
-            std::string filename = evhttp_find_header(req->input_headers, "FileName");
+            std::string filename = evhttp_find_header(req->input_headers, "FileName"); 
             // 解码文件名
             filename = base64_decode(filename);
 

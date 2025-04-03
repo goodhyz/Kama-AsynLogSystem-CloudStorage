@@ -49,10 +49,17 @@
 #include <stdio.h>   // size_t
 #include <stdbool.h> // bool
 
+/*
+确保在C++编译器中使用C语言链接规则
+reason：C++支持函数重载，因此编译器会对函数名进行名称修饰（name mangling），而C语言不会。
+*/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/*
+跨平台导入导出 EXPORT IMPORT STATIC
+*/
 #ifdef _MSC_VER
 #define BUNDLE_API_EXPORT __declspec(dllexport)
 #define BUNDLE_API_IMPORT __declspec(dllimport)
@@ -63,6 +70,9 @@ extern "C" {
 #define BUNDLE_API_STATIC
 #endif
 
+/*
+如果没有定义API，默认设置为导出
+*/
 #ifndef BUNDLE_API
 #define BUNDLE_API BUNDLE_API_EXPORT
 #endif
@@ -74,6 +84,9 @@ enum { BUNDLE_RAW, BUNDLE_SHOCO, BUNDLE_LZ4F, BUNDLE_MINIZ, BUNDLE_LZIP, BUNDLE_
        BUNDLE_BZIP2                                                                                                   // 23..
 };
 
+/*
+压缩数据头的最大大小  ai:??用于分配缓冲区或验证数据头的大小??
+ */
 // constant: 32 = [0..10] padding + [1] 0x70 + [1] q + [1..10] vle(in) + [1..10] vle(out)
 enum { BUNDLE_MAX_HEADER_SIZE = 32 }; 
 
@@ -146,6 +159,9 @@ namespace bundle
 
     enum { MAX_HEADER_SIZE = BUNDLE_MAX_HEADER_SIZE };
 
+    /*
+    压缩算法属性函数
+    */
     // algorithm properties
     inline const char *const name_of( unsigned q ) { return bundle_name_of( q ); }
     inline const char *const version_of( unsigned q ) { return bundle_version_of( q ); }
@@ -153,6 +169,9 @@ namespace bundle
     inline size_t unc_payload( unsigned q ) { return bundle_unc_payload( q ); }
     inline size_t bound( unsigned q, size_t len ) { return bundle_bound( q, len ); }
 
+    /*
+    低级api 用指针
+    */
     // low level API (raw pointers)
 
     inline bool is_packed( const void *mem, size_t size ) { return bundle_is_packed( mem, size ); }
@@ -177,6 +196,9 @@ namespace bundle
         return out;
     }
 
+    /*
+    中级API 用模板
+    */
     // medium level API, templates (in-place)
 
     template<typename container>
@@ -291,6 +313,9 @@ namespace bundle
         return false;
     }
 
+    /*
+    高级API
+    */
     // high level API, templates (copy)
 
     template < class T1 >
@@ -326,7 +351,7 @@ namespace bundle
             all.push_back( ZSTDF );
             all.push_back( CRUSH );
             all.push_back( LZJB );
-            all.push_back( BZIP2 );
+            all.push_back( BZIP2 ); //14
 #if 0
             // for archival purposes
             all.push_back( LZFX );
@@ -352,11 +377,12 @@ namespace bundle
             all.push_back( MCM );
             all.push_back( TANGELO );
             all.push_back( ZMOLLY );
-            all.push_back( ZPAQ );
+            all.push_back( ZPAQ ); //10
         }
         return all;
     }
 
+    // 所有算法
     static inline std::vector<unsigned> encodings() {
         static std::vector<unsigned> all;
         if( all.empty() ) {

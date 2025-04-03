@@ -6,7 +6,7 @@
 #include "bundle.h"
 #include "Config.hpp"
 #include <iostream>
-#include <experimental/filesystem>
+#include <experimental/filesystem>  
 #include <string>
 #include <sys/stat.h>
 #include <vector>
@@ -17,9 +17,9 @@ namespace storage
 {
     namespace fs = std::experimental::filesystem;
 
-    static unsigned char ToHex(unsigned char x)
+    static unsigned char ToHex(unsigned char x) 
     {
-        return x > 9 ? x + 55 : x + 48;
+        return x > 9 ? x + 55 : x + 48; 
     }
 
     static unsigned char FromHex(unsigned char x)
@@ -69,11 +69,12 @@ namespace storage
         //  获取文件大小
         int64_t FileSize()
         {
-            struct stat s;
+            struct stat s; // <sys/stat.h>
             auto ret = stat(filename_.c_str(), &s);
             if (ret == -1)
-            {
-                mylog::GetLogger("asynclogger")->Info("%s, Get file size failed: %s", filename_.c_str(),strerror(errno));
+            {   
+                // <errno.h>
+                mylog::GetLogger("asynclogger")->Info("%s, Get file size failed: %s", filename_.c_str(),strerror(errno)); 
                 return -1;
             }
             return s.st_size;
@@ -108,7 +109,7 @@ namespace storage
         std::string FileName()
         {
             auto pos = filename_.find_last_of("/");
-            if (pos == std::string::npos)
+            if (pos == std::string::npos) //没找到/
                 return filename_;
             return filename_.substr(pos + 1, std::string::npos);
         }
@@ -125,7 +126,7 @@ namespace storage
 
             // 打开文件
             std::ifstream ifs;
-            ifs.open(filename_.c_str(), std::ios::binary);
+            ifs.open(filename_.c_str(), std::ios::binary); // 二进制模式
             if (ifs.is_open() == false)
             {
                 mylog::GetLogger("asynclogger")->Info("%s,file open error",filename_.c_str());
@@ -136,7 +137,7 @@ namespace storage
             ifs.seekg(pos, std::ios::beg); // 更改文件指针的偏移量
             content->resize(len);
             ifs.read(&(*content)[0], len);
-            if (!ifs.good())
+            if (!ifs.good()) // 检查文件流状态
             {
                 mylog::GetLogger("asynclogger")->Info("%s,read file content error",filename_.c_str());
                 ifs.close();
@@ -153,10 +154,10 @@ namespace storage
             return GetPosLen(content, 0, FileSize());
         }
 
-        // 写文件
+        // 写文件 （覆盖原有内容）
         bool SetContent(const char *content, size_t len)
         {
-            std::ofstream ofs;
+            std::ofstream ofs; // ofstream 默认清空 std::ios::out|std::ios::trunc
             ofs.open(filename_.c_str(), std::ios::binary);
             if (!ofs.is_open())
             {
@@ -182,7 +183,7 @@ namespace storage
             std::string packed = bundle::pack(format, content);
             if (packed.size() == 0)
             {
-                mylog::GetLogger("asynclogger")->Info("Compress packed size error:%d", packed.size());
+                mylog::GetLogger("asynclogger")->Info("Compress packed size error:%d", packed.size()); //日志可以更详细
                 return false;
             }
             // 将压缩的数据写入压缩包文件中
@@ -231,7 +232,7 @@ namespace storage
 
         bool ScanDirectory(std::vector<std::string> *arry)
         {
-            for (auto &p : fs::directory_iterator(filename_))
+            for (auto &p : fs::directory_iterator(filename_)) // filename是?
             {
                 if (fs::is_directory(p) == true)
                     continue;
@@ -271,7 +272,7 @@ namespace storage
                 mylog::GetLogger("asynclogger")->Info("parse error");
                 return false;
             }
-            return false;
+            return true; 
         }
     };
 }

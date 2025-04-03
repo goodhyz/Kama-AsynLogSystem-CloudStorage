@@ -18,6 +18,7 @@ namespace storage
         std::string storage_info_;     // 已存储文件的信息
         int bundle_format_;//深度存储的文件后缀，由选择的压缩格式确定
     private:
+        // 两个静态成员
         static std::mutex _mutex;
         static Config *_instance;
         Config()
@@ -44,7 +45,14 @@ namespace storage
             }
 
             Json::Value root;
-            storage::JsonUtil::UnSerialize(content, &root); // 反序列化，把内容转成jaon value格式
+            storage::JsonUtil::UnSerialize(content, &root); // 反序列化，把内容转成json value格式
+
+            // 这里是否存在错误，如果content不合法，应该返回false，后期修改
+            // if (!storage::JsonUtil::UnSerialize(content, &root))
+            // {
+            //     mylog::GetLogger("asynclogger")->Error("Failed to parse JSON config"); //多余
+            //     return false;
+            // }
 
             // 要记得转换的时候用上asint，asstring这种函数，json的数据类型是Value。
             server_port_ = root["server_port"].asInt();
@@ -71,7 +79,7 @@ namespace storage
         }
         int GetBundleFormat()
         {
-            return bundle_format_;
+            return bundle_format_; // 可以不止返回int 调用bundle库返回更详细
         }
         std::string GetDeepStorageDir()
         {
@@ -90,12 +98,12 @@ namespace storage
         // 获取单例类对象
         static Config *GetInstance()
         {
-            if (_instance == nullptr)
+            if (_instance == nullptr) // 获取锁
             {
                 _mutex.lock();
-                if (_instance == nullptr)
+                if (_instance == nullptr) // 防止被阻塞的再次创建
                 {
-                    _instance = new Config();
+                    _instance = new Config(); 
                 }
                 _mutex.unlock();
             }
@@ -103,6 +111,8 @@ namespace storage
         }
     };
     // 静态成员初始化，先写类型再写类域
+    // private会限制访问，但不会限制定义
+    // C++17允许类内初始化
     std::mutex Config::_mutex;
     Config *Config::_instance = nullptr;
 }

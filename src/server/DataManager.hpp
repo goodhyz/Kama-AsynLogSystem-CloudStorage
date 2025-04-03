@@ -72,7 +72,10 @@ namespace storage
 
             // 反序列化
             Json::Value root;
-            storage::JsonUtil::UnSerialize(body, &root);
+            if(!storage::JsonUtil::UnSerialize(body, &root)){
+                mylog::GetLogger("asynclogger")->Error("storage file unserialize failed");
+                return false;
+            }
             // 3，将反序列化得到的Json::Value中的数据添加到table中
             for (int i = 0; i < root.size(); i++)
             {
@@ -125,6 +128,7 @@ namespace storage
             return true;
         }
 
+        // 是否对后获取锁的有利？
         bool Insert(const StorageInfo &info)
         {
             mylog::GetLogger("asynclogger")->Info("data_message Insert start");
@@ -154,28 +158,32 @@ namespace storage
             mylog::GetLogger("asynclogger")->Info("data_message Update end");
             return true;
         }
+
+
+        /// 三个操作只涉及read，使用读锁
         bool GetOneByURL(const std::string &key, StorageInfo *info)
         {
-            pthread_rwlock_wrlock(&rwlock_);
+            pthread_rwlock_rdlock(&rwlock_); // 写锁改为读锁
             // URL是key，所以直接find()找
             if (table_.find(key) == table_.end())
             {
+                pthread_rwlock_unlock(&rwlock_); // 释放
                 return false;
             }
             *info = table_[key]; // 获取url对应的文件存储信息
-            pthread_rwlock_wrlock(&rwlock_);
+            pthread_rwlock_unlock(&rwlock_);
             return true;
         }
         bool GetOneByStoragePath(const std::string &storage_path, StorageInfo *info)
         {
-            pthread_rwlock_wrlock(&rwlock_);
+            pthread_rwlock_rdlock(&rwlock_);
             // 遍历 通过realpath字段找到对应存储信息
             for (auto e : table_)
             {
                 if (e.second.storage_path_ == storage_path)
                 {
                     *info = e.second;
-                    pthread_rwlock_wrlock(&rwlock_);
+                    pthread_rwlock_unlock(&rwlock_); 
                     return true;
                 }
             }
@@ -184,7 +192,7 @@ namespace storage
         }
         bool GetAll(std::vector<StorageInfo> *arry)
         {
-            pthread_rwlock_wrlock(&rwlock_);
+            pthread_rwlock_rdlock(&rwlock_);
             for (auto e : table_)
                 arry->emplace_back(e.second);
             pthread_rwlock_unlock(&rwlock_);
