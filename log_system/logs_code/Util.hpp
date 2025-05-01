@@ -34,6 +34,8 @@ namespace mylog
                     return filename.substr(0, pos + 1);
                 return "";
             }
+
+            // 递归创建目录
             static void CreateDirectory(const std::string &pathname)
             {
                 if (pathname.empty())
@@ -144,6 +146,7 @@ namespace mylog
                 return false;
             }
         };
+        // 单例模式获取config.conf 与配置信息相关
         struct JsonData{
             static JsonData* GetJsonData(){
                static JsonData* json_data = new JsonData;
@@ -172,9 +175,9 @@ namespace mylog
                 size_t threshold;// 倍数扩容阈值
                 size_t linear_growth;// 线性增长容量
                 size_t flush_log;//控制日志同步到磁盘的时机，默认为0,1调用fflush，2调用fsync
-                std::string backup_addr;
-                uint16_t backup_port;
-                size_t thread_count;
+                std::string backup_addr;//备份服务ip
+                uint16_t backup_port;//放行的端口
+                size_t thread_count;//线程数
         };
     } // namespace Util
 } // namespace mylog

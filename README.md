@@ -12,7 +12,7 @@ Ubuntu22.04 LTS
 
 g++安装
 
-```bash
+```bash 
 sudo update
 sudo apt install g++
 ```

@@ -28,7 +28,7 @@ public:
             workers.emplace_back(
                 [this]
                 {
-                    for (;;)
+                    for(;;)//相当于while 
                     {
                         std::function<void()> task;
                         {
@@ -42,7 +42,7 @@ public:
                             //取出任务
                             task = std::move(this->tasks.front());
                             this->tasks.pop();
-                        }
+                        } //lock 析构，自动释放锁
                         // 执行任务
                         task();
                     }

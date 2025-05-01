@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 
 #include <regex>
-
+    
 #include "base64.h" // 来自 cpp-base64 库
 
 extern storage::DataManager *data_;
@@ -105,6 +105,7 @@ namespace storage
             }
             else
             {
+                mylog::GetLogger("asynclogger")->Info("req not implemented");
                 evhttp_send_reply(req, HTTP_NOTFOUND, "Not Found", NULL);
             }
         }
